@@ -22,7 +22,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         $query = Project::query()
-            ->with(['creator'])
+            ->with(['creator', 'members'])
             ->withCount('tasks');
 
         if ($user->isMember()) {

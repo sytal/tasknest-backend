@@ -24,13 +24,13 @@ class TaskController extends Controller
         $user = $request->user();
 
         $tasks = QueryBuilder::for(Task::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('project_id'),
                 AllowedFilter::exact('assignee_id'),
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('priority'),
-            ])
-            ->allowedSorts(['due_date', 'priority', 'created_at'])
+            )
+            ->allowedSorts('due_date', 'priority', 'created_at')
             ->with(['project', 'assignee', 'creator'])
             ->when($user->isMember(), function ($query) use ($user) {
                 $query->whereHas('project', function ($projectQuery) use ($user) {
