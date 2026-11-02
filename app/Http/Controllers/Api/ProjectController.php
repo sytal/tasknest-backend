@@ -23,7 +23,10 @@ class ProjectController extends Controller
 
         $query = Project::query()
             ->with(['creator', 'members'])
-            ->withCount('tasks');
+            ->withCount([
+                'tasks',
+                'tasks as tasks_done_count' => fn ($q) => $q->where('status', 'done'),
+            ]);
 
         if ($user->isMember()) {
             $query->whereRelation('members', 'users.id', $user->id);
@@ -61,7 +64,10 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $project->load(['creator', 'members'])->loadCount('tasks');
+        $project->load(['creator', 'members'])->loadCount([
+            'tasks',
+            'tasks as tasks_done_count' => fn ($q) => $q->where('status', 'done'),
+        ]);
 
         return response()->json(['data' => new ProjectResource($project)]);
     }
