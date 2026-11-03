@@ -47,4 +47,12 @@ class TaskPolicy
     {
         return false;
     }
+
+    /**
+     * Only director/ceo (via before()) may bulk-assign tasks within a project.
+     */
+    public function bulkAssign(User $user): bool
+    {
+        return false;
+    }
 }

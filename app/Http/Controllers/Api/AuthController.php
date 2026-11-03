@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
+use App\Http\Requests\UploadAvatarRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -59,5 +61,39 @@ class AuthController extends Controller
         return response()->json([
             'user' => new UserResource($request->user()),
         ]);
+    }
+
+    /**
+     * Upload (or replace) the authenticated user's avatar.
+     */
+    public function uploadAvatar(UploadAvatarRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+        }
+
+        $extension = $request->file('avatar')->getClientOriginalExtension();
+        $path = $request->file('avatar')->storeAs('avatars', "{$user->id}.{$extension}", 'public');
+
+        $user->update(['avatar_path' => $path]);
+
+        return response()->json(['data' => new UserResource($user)]);
+    }
+
+    /**
+     * Remove the authenticated user's avatar.
+     */
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+            $user->update(['avatar_path' => null]);
+        }
+
+        return response()->json(['data' => new UserResource($user)]);
     }
 }

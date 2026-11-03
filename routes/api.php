@@ -15,6 +15,8 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/me/avatar', [AuthController::class, 'uploadAvatar']);
+    Route::delete('/me/avatar', [AuthController::class, 'deleteAvatar']);
 
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
@@ -35,4 +37,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/tasks/{task}', [TaskController::class, 'update']);
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
+    Route::post('/projects/{project}/tasks/bulk-assign', [TaskController::class, 'bulkAssign']);
 });

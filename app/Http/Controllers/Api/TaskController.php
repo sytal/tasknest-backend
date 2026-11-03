@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreBulkAssignRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Requests\UpdateTaskStatusRequest;
 use App\Http\Resources\TaskResource;
+use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -96,5 +99,38 @@ class TaskController extends Controller
         $task->delete();
 
         return response()->json(['message' => 'Task deleted successfully.']);
+    }
+
+    /**
+     * Bulk-assign tasks within a project: a single assignee gets every task,
+     * or multiple assignees are round-robined across the given task_ids in order.
+     */
+    public function bulkAssign(StoreBulkAssignRequest $request, Project $project): JsonResponse
+    {
+        $this->authorize('bulkAssign', Task::class);
+
+        $data = $request->validated();
+        $taskIds = $data['task_ids'];
+        $assigneeIds = $data['assignee_ids'];
+        $assigneeCount = count($assigneeIds);
+
+        DB::transaction(function () use ($taskIds, $assigneeIds, $assigneeCount) {
+            foreach ($taskIds as $index => $taskId) {
+                $assigneeId = $assigneeIds[$index % $assigneeCount];
+                Task::whereKey($taskId)->update(['assignee_id' => $assigneeId]);
+            }
+        });
+
+        $tasks = Task::whereIn('id', $taskIds)
+            ->with(['project', 'assignee', 'creator'])
+            ->get();
+
+        return response()->json([
+            'data' => TaskResource::collection($tasks),
+            'meta' => [
+                'updated_count' => $tasks->count(),
+                'assignee_count' => $assigneeCount,
+            ],
+        ]);
     }
 }
