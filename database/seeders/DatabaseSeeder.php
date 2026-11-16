@@ -35,6 +35,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // The demo seeder creates well-known accounts (password "password").
+        if (app()->environment('production') && ! env('ALLOW_DEMO_SEED')) {
+            $this->command?->error('Refusing to seed demo accounts in production. Set ALLOW_DEMO_SEED=true to override.');
+
+            return;
+        }
+
         $password = Hash::make('password');
 
         $director = User::create([

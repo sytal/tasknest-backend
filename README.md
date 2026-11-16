@@ -1,58 +1,62 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# TaskNest API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 13 REST API for **TaskNest**, a project and task management app with role-based access, collaboration (comments, activity, notifications) and a due-date reminder scheduler. 
+> **Frontend:** the Flutter client lives in [sytal/tasknest-app](https://github.com/sytal/tasknest-app). Run this API on port 8012 and the app connects to it by default.
 
-## About Laravel
+![Tests](https://github.com/sytal/tasknest-backend/actions/workflows/tests.yml/badge.svg)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
+- **Auth:** Sanctum tokens (30-day expiry), login/forgot/avatar/comment rate limits, account deactivation, password reset.
+- **Roles:** `director`, `ceo` (management) and `member`. The account role is only visible to management (and to the user themselves); everyone sees a free-text **designation**, which only the CEO can change.
+- **Projects:** members with project roles (lead/member), archive/restore (archived = read-only), labels, due dates.
+- **Tasks:** status, priority, assignee, start/due dates, estimates, subtasks, labels, bulk assign, status moves.
+- **Collaboration:** comments, activity log, in-app notifications, daily due reminders (idempotent).
+- **Misc:** global search, dashboard (due soon, recent activity, team workload), avatar processing (512px JPEG).
+- Policies return 404 for resources a user must not know exist; list endpoints paginate when `page`/`per_page` is sent.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+## Quick start
 ```bash
-composer require laravel/boost --dev
+composer install
+cp .env.example .env && php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed        # demo data (blocked in production)
+php artisan storage:link
+php artisan serve --port=8012     # API at http://127.0.0.1:8012/api
+```
+Demo logins (password `password`): `director@`, `ceo@`, `alice@` (lead of Website Relaunch), `bob@`, `carol@`, `dave@`, `erin@` + `tasknest.test`.
 
-php artisan boost:install
+## Tests
+```bash
+php artisan test
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Configuration
+| Variable | Purpose |
+|---|---|
+| `APP_URL` | Public API URL |
+| `FRONTEND_URL` | Used in password-reset links |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated web origins allowed to call the API |
+| `MAIL_*` | Mail transport for password reset (defaults to `log`) |
+| `QUEUE_CONNECTION` | `database` by default; run `php artisan queue:work` |
+| `ALLOW_DEMO_SEED` | Set to `true` to allow the demo seeder in production (don't) |
 
-## Contributing
+## Production checklist
+- `APP_ENV=production`, `APP_DEBUG=false`, a generated `APP_KEY`, HTTPS only.
+- Do **not** run the demo seeder; create the first director/CEO account manually (`php artisan tinker`).
+- Use a real database (MySQL/PostgreSQL) instead of SQLite for multi-user load.
+- Set `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL` and real `MAIL_*` settings.
+- Run a queue worker and the scheduler (`* * * * * php artisan schedule:run`) for reminders.
+- `php artisan config:cache route:cache` and `storage:link`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## API overview
+`/api/login`, `/me`, `/users`, `/projects`, `/projects/{id}/members|labels|activity`, `/tasks`, `/tasks/{id}/comments|subtasks|activity`, `/dashboard`, `/search`, `/notifications`, `/meta`, `/health`. All except login/forgot/reset/meta/health need `Authorization: Bearer <token>`.
 
-## Code of Conduct
+## Screenshots
+See the [app repository](https://github.com/sytal/tasknest-app#screenshots).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Connect the app
+```bash
+git clone https://github.com/sytal/tasknest-app && cd tasknest-app
+flutter pub get && flutter run -d chrome   # uses http://127.0.0.1:8012/api
+```
+For a web build served from another origin, add it to `CORS_ALLOWED_ORIGINS`.
