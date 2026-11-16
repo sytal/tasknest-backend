@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
@@ -20,9 +21,9 @@ class ProjectPolicy
         return true;
     }
 
-    public function view(User $user, Project $project): bool
+    public function view(User $user, Project $project): Response
     {
-        return $project->hasMember($user->id);
+        return $project->hasMember($user->id) ? Response::allow() : Response::denyAsNotFound();
     }
 
     public function create(User $user): bool
@@ -43,5 +44,11 @@ class ProjectPolicy
     public function manageMembers(User $user, Project $project): bool
     {
         return false;
+    }
+
+    /** Archive/unarchive and label management: leads (management bypasses). */
+    public function lead(User $user, Project $project): bool
+    {
+        return $project->isLead($user->id);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Limits;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CreateUserRequest extends FormRequest
@@ -18,8 +19,8 @@ class CreateUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:'.Limits::PASSWORD_MIN],
             'role' => ['required', 'in:director,ceo,member'],
             'designation' => ['nullable', 'string', 'max:255'],
         ];

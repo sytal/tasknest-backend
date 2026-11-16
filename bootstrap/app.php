@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -25,5 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // "login" web route, always respond with JSON 401.
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             return response()->json(['message' => $e->getMessage() ?: 'Unauthenticated.'], 401);
+        });
+
+        // Don't leak internal model names in 404 messages.
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Not Found'], 404);
+            }
         });
     })->create();

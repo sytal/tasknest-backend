@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class TaskPolicy
 {
@@ -20,9 +21,9 @@ class TaskPolicy
         return true;
     }
 
-    public function view(User $user, Task $task): bool
+    public function view(User $user, Task $task): Response
     {
-        return $task->project->hasMember($user->id);
+        return $task->project->hasMember($user->id) ? Response::allow() : Response::denyAsNotFound();
     }
 
     public function create(User $user): bool
@@ -54,5 +55,17 @@ class TaskPolicy
     public function bulkAssign(User $user): bool
     {
         return false;
+    }
+
+    /** Add/delete/reorder subtasks: project lead (management bypasses). */
+    public function manageSubtasks(User $user, Task $task): bool
+    {
+        return $task->project->isLead($user->id);
+    }
+
+    /** Tick a subtask: assignee or project lead. */
+    public function toggleSubtask(User $user, Task $task): bool
+    {
+        return $task->assignee_id === $user->id || $task->project->isLead($user->id);
     }
 }
