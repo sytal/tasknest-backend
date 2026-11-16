@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Label;
+use App\Support\Limits;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateProjectRequest extends FormRequest
 {
@@ -18,7 +21,9 @@ class UpdateProjectRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:'.Limits::PROJECT_DESCRIPTION_MAX],
+            'due_date' => ['nullable', 'date'],
+            'color' => ['nullable', 'string', Rule::in(Label::PALETTE)],
         ];
     }
 }

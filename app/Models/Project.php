@@ -10,11 +10,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'description', 'created_by'])]
+#[Fillable(['name', 'description', 'created_by', 'status', 'due_date', 'color'])]
 class Project extends Model
 {
     /** @use HasFactory<ProjectFactory> */
     use HasFactory;
+
+    protected function casts(): array
+    {
+        return ['due_date' => 'date'];
+    }
 
     /**
      * Members of this project (through the pivot), with their per-project role.
@@ -39,6 +44,16 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
+    }
+
+    public function isLead(int $userId): bool
+    {
+        return $this->members()->where('users.id', $userId)->wherePivot('project_role', 'lead')->exists();
     }
 
     public function hasMember(int $userId): bool
