@@ -17,7 +17,12 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
-            'role' => $this->role,
+            // Role is a permission level: only director/CEO (and the user
+            // themselves, for client-side permission checks) receive it.
+            'role' => $this->when(
+                ($viewer = $request->user()) === null || $viewer->isManagement() || $viewer->id === $this->id,
+                fn () => $this->role,
+            ),
             'designation' => $this->designation,
             'is_active' => (bool) $this->is_active,
             'avatar_url' => $this->avatar_path ? Storage::disk('public')->url($this->avatar_path) : null,

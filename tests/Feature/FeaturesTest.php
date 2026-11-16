@@ -243,4 +243,24 @@ class FeaturesTest extends TestCase
         $this->deleteJson("/api/projects/{$this->project->id}/members/{$this->member->id}?unassign_tasks=1")->assertOk();
         $this->assertNull($this->task->fresh()->assignee_id);
     }
+
+    public function test_role_is_hidden_from_members_but_visible_to_management(): void
+    {
+        Sanctum::actingAs($this->member);
+        $body = $this->getJson("/api/projects/{$this->project->id}")->assertOk()->json('data.members');
+        foreach ($body as $m) {
+            if ($m['id'] !== $this->member->id) {
+                $this->assertArrayNotHasKey('role', $m);
+            }
+        }
+        $this->getJson('/api/search?q=le')->assertOk()->assertJsonCount(0, 'users');
+        $this->assertArrayHasKey('role', $this->getJson('/api/me')->json('user'));
+        $t = $this->getJson("/api/tasks/{$this->task->id}")->json('data');
+        $this->assertArrayNotHasKey('role', $t['creator']);
+
+        Sanctum::actingAs($this->director);
+        $members = $this->getJson("/api/projects/{$this->project->id}")->json('data.members');
+        $this->assertArrayHasKey('role', $members[0]);
+        $this->getJson('/api/users?page=1')->assertJsonPath('data.0.role', fn ($r) => $r !== null);
+    }
 }
