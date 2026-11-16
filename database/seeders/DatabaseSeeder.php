@@ -14,7 +14,12 @@
 
 namespace Database\Seeders;
 
+use App\Models\Activity;
+use App\Models\Comment;
+use App\Models\Label;
 use App\Models\Project;
+use App\Models\Subtask;
+use App\Notifications\TaskNestNotification;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -124,7 +129,7 @@ class DatabaseSeeder extends Seeder
 
         // --- Tasks ---
 
-        Task::create([
+        $homepage = Task::create([
             'project_id' => $website->id,
             'title' => 'Design new homepage layout',
             'description' => 'Create high-fidelity mockups for the new homepage.',
@@ -135,7 +140,7 @@ class DatabaseSeeder extends Seeder
             'created_by' => $director->id,
         ]);
 
-        Task::create([
+        $nav = Task::create([
             'project_id' => $website->id,
             'title' => 'Implement responsive navigation',
             'description' => 'Build the new nav bar with mobile menu support.',
@@ -157,7 +162,7 @@ class DatabaseSeeder extends Seeder
             'created_by' => $director->id,
         ]);
 
-        Task::create([
+        $login = Task::create([
             'project_id' => $mobileApp->id,
             'title' => 'Build login screen',
             'description' => 'Email/password login using Sanctum token auth.',
@@ -222,5 +227,37 @@ class DatabaseSeeder extends Seeder
             'assignee_id' => $bob->id,
             'created_by' => $director->id,
         ]);
+
+        // --- Labels, subtasks, comments, activity, notifications (demo data) ---
+
+        $design = Label::create(['project_id' => $website->id, 'name' => 'Design', 'color' => 'purple']);
+        $frontend = Label::create(['project_id' => $website->id, 'name' => 'Frontend', 'color' => 'blue']);
+        $urgent = Label::create(['project_id' => $mobileApp->id, 'name' => 'Urgent', 'color' => 'red']);
+        $homepage->labels()->attach($design->id);
+        $nav->labels()->attach([$frontend->id, $design->id]);
+        $login->labels()->attach($urgent->id);
+
+        $position = 0;
+        foreach (['Desktop layout' => true, 'Mobile menu' => true, 'Keyboard navigation' => false, 'Cross-browser test' => false, 'Accessibility review' => false] as $title => $done) {
+            Subtask::create(['task_id' => $nav->id, 'title' => $title, 'is_done' => $done, 'position' => $position++]);
+        }
+
+        Comment::create(['task_id' => $nav->id, 'user_id' => $director->id, 'body' => 'Please make sure the menu works with a keyboard.']);
+        Comment::create(['task_id' => $nav->id, 'user_id' => $alice->id, 'body' => 'On it, desktop layout is done and the mobile menu is in review.']);
+        Comment::create(['task_id' => $login->id, 'user_id' => $ceo->id, 'body' => 'Can we get this demoed on Friday?']);
+
+        $log = fn (User $u, string $type, Task $t, array $meta) => Activity::create([
+            'user_id' => $u->id, 'subject_type' => 'Task', 'subject_id' => $t->id,
+            'project_id' => $t->project_id, 'type' => $type, 'meta' => $meta + ['title' => $t->title],
+        ]);
+        $log($director, 'task.created', $nav, []);
+        $log($alice, 'task.status_changed', $nav, ['from' => 'todo', 'to' => 'in_progress']);
+        $log($carol, 'task.status_changed', $homepage, ['from' => 'in_progress', 'to' => 'done']);
+        $log($ceo, 'task.created', $login, []);
+        $log($dave, 'task.status_changed', $login, ['from' => 'todo', 'to' => 'in_progress']);
+
+        $alice->notify(new TaskNestNotification('task_comment', "Daniel Director commented on '{$nav->title}'", $nav->id, $website->id));
+        $alice->notify(new TaskNestNotification('task_assigned', "You were assigned 'Implement task list screen'", null, $mobileApp->id));
+        $dave->notify(new TaskNestNotification('task_comment', "Carla CEO commented on '{$login->title}'", $login->id, $mobileApp->id));
     }
 }

@@ -7,9 +7,10 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\UploadAvatarRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\AvatarProcessor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
@@ -26,14 +27,15 @@ class AuthController extends Controller
     {
         $credentials = $request->validated();
 
-        if (! Auth::validate([
-            'email' => $credentials['email'],
-            'password' => $credentials['password'],
-        ])) {
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
-        $user = User::where('email', $credentials['email'])->first();
+        if (! $user->is_active) {
+            return response()->json(['message' => 'Account disabled. Contact your administrator.'], 403);
+        }
 
         $token = $user->createToken($credentials['device_name'] ?? 'tasknest-mobile');
 
@@ -74,10 +76,9 @@ class AuthController extends Controller
             Storage::disk('public')->delete($user->avatar_path);
         }
 
-        $extension = $request->file('avatar')->getClientOriginalExtension();
-        $path = $request->file('avatar')->storeAs('avatars', "{$user->id}.{$extension}", 'public');
+        $path = AvatarProcessor::store($request->file('avatar'), $user->id);
 
-        $user->update(['avatar_path' => $path]);
+        $user->forceFill(['avatar_path' => $path])->save();
 
         return response()->json(['data' => new UserResource($user)]);
     }
@@ -91,7 +92,7 @@ class AuthController extends Controller
 
         if ($user->avatar_path) {
             Storage::disk('public')->delete($user->avatar_path);
-            $user->update(['avatar_path' => null]);
+            $user->forceFill(['avatar_path' => null])->save();
         }
 
         return response()->json(['data' => new UserResource($user)]);

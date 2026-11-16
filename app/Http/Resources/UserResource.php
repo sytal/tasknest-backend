@@ -19,6 +19,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'role' => $this->role,
             'designation' => $this->designation,
+            'is_active' => (bool) $this->is_active,
             'avatar_url' => $this->avatar_path ? Storage::disk('public')->url($this->avatar_path) : null,
             'project_role' => $this->when(
                 $this->pivot !== null,
