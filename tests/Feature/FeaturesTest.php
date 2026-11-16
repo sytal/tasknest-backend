@@ -132,7 +132,7 @@ class FeaturesTest extends TestCase
     {
         Sanctum::actingAs($this->member);
         $this->putJson('/api/me', ['name' => ''])->assertStatus(422);
-        $this->putJson('/api/me', ['name' => 'New Name', 'designation' => 'Dev', 'role' => 'director'])->assertOk()->assertJsonPath('user.name', 'New Name');
+        $this->putJson('/api/me', ['name' => 'New Name', 'role' => 'director'])->assertOk()->assertJsonPath('user.name', 'New Name');
         $this->assertSame('member', $this->member->fresh()->role);
 
         $this->putJson('/api/me/password', ['current_password' => 'wrong', 'password' => 'newpassword1', 'password_confirmation' => 'newpassword1'])->assertStatus(422);
@@ -262,5 +262,21 @@ class FeaturesTest extends TestCase
         $members = $this->getJson("/api/projects/{$this->project->id}")->json('data.members');
         $this->assertArrayHasKey('role', $members[0]);
         $this->getJson('/api/users?page=1')->assertJsonPath('data.0.role', fn ($r) => $r !== null);
+    }
+
+    public function test_only_ceo_can_change_designations(): void
+    {
+        Sanctum::actingAs($this->member);
+        $this->putJson('/api/me', ['name' => 'Same', 'designation' => 'Boss'])->assertForbidden();
+        $this->putJson('/api/me', ['name' => 'Renamed'])->assertOk();
+
+        Sanctum::actingAs($this->director);
+        $this->putJson("/api/users/{$this->member->id}", ['designation' => 'Lead Dev'])->assertForbidden();
+        $this->postJson('/api/users', ['name' => 'N', 'email' => 'n@t.test', 'password' => 'password123', 'role' => 'member', 'designation' => 'QA'])->assertForbidden();
+
+        Sanctum::actingAs($this->ceo);
+        $this->putJson("/api/users/{$this->member->id}", ['designation' => 'Lead Dev'])
+            ->assertOk()->assertJsonPath('data.designation', 'Lead Dev');
+        $this->putJson('/api/me', ['name' => 'CEO', 'designation' => 'Chief'])->assertOk();
     }
 }

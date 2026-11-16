@@ -42,7 +42,9 @@ class UserController extends Controller
      */
     public function store(CreateUserRequest $request): JsonResponse
     {
-        $user = User::create($request->validated());
+        $data = $request->validated();
+        abort_if(trim((string) ($data['designation'] ?? '')) !== '' && ! $request->user()->isCeo(), 403, 'Only the CEO can set designations.');
+        $user = User::create($data);
 
         return response()->json(['data' => new UserResource($user)], 201);
     }
@@ -51,6 +53,12 @@ class UserController extends Controller
     {
         $this->guard($request, $user);
         $data = $request->validated();
+
+        if (array_key_exists('designation', $data)) {
+            $new = trim((string) $data['designation']);
+            abort_if($new !== trim((string) $user->designation) && ! $request->user()->isCeo(), 403, 'Only the CEO can change designations.');
+            $data['designation'] = $new === '' ? null : $new;
+        }
 
         if (isset($data['role']) && $data['role'] !== $user->role) {
             abort_if($user->id === $request->user()->id, 422, 'You cannot change your own role.');

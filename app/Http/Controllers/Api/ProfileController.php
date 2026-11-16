@@ -14,7 +14,13 @@ class ProfileController extends Controller
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
-        $user->forceFill($request->validated())->save();
+        $data = $request->validated();
+        if (array_key_exists('designation', $data)) {
+            $new = trim((string) $data['designation']);
+            abort_if($new !== trim((string) $user->designation) && ! $user->isCeo(), 403, 'Only the CEO can change designations.');
+            $data['designation'] = $new === '' ? null : $new;
+        }
+        $user->forceFill($data)->save();
 
         return response()->json(['user' => new UserResource($user)]);
     }
