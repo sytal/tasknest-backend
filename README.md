@@ -1,6 +1,6 @@
 # TaskNest API
 
-Laravel 13 REST API for **TaskNest**, a project and task management app with role-based access, collaboration (comments, activity, notifications) and a due-date reminder scheduler. 
+Laravel 13 REST API (PHP 8.4+) for **TaskNest**, a project and task management app with role-based access, collaboration (comments, activity, notifications) and a due-date reminder scheduler. 
 > **Frontend:** the Flutter client lives in [sytal/tasknest-app](https://github.com/sytal/tasknest-app). Run this API on port 8012 and the app connects to it by default.
 
 ![Tests](https://github.com/sytal/tasknest-backend/actions/workflows/tests.yml/badge.svg)
