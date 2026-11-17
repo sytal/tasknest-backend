@@ -1,0 +1,28 @@
+# Shared-hosting helper: use this ONLY when the whole Laravel project sits in the
+# web root (e.g. public_html) and the domain cannot point at the /public folder.
+# Best practice is to set the document root to .../public instead.
+
+Options -Indexes
+
+# Never serve secrets, VCS, backups, archives or tooling files.
+<FilesMatch "(^\.|\.(env|zip|sql|bak|log|lock|md|json|xml|cache|sqlite)$|^artisan$)">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Force HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Pass the Authorization header (Sanctum bearer tokens)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Everything is served from /public (the Laravel front controller lives there).
+    # Because /public/.env etc. do not exist, requests for /.env, /vendor/... return 404.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
